@@ -1,0 +1,3 @@
+[submodule "lab05"]
+	path = lab05
+	url = git@github.com:4m09u5/OSISP_LAB05.git
