@@ -12,6 +12,7 @@
 #include <string.h>
 #include <termios.h>
 #include <sys/mman.h>
+#include <pthread.h>
 
 pthread_t *producers = NULL;
 uint8_t **producerFlags = NULL;
@@ -57,13 +58,14 @@ void createProducer(struct Queue *queue) {
     printf("Created new producer. Total producers: %ld\n", producersSize);
 }
 
-void killProducer() {
+void killProducer(struct Queue *queue) {
     if (producersSize == 0)
         return;
     
     producersSize--;
     *producerFlags[producersSize] = 0;
     
+    pthread_cond_broadcast(&queue->writeCondition);
     pthread_join(producers[producersSize], NULL);
     free(producerFlags[producersSize]);
 
@@ -96,13 +98,14 @@ void createConsumer(struct Queue *queue) {
     printf("Created new consumer. Total consumers: %ld\n", consumersSize);
 }
 
-void killConsumer() {
+void killConsumer(struct Queue *queue) {
     if (consumersSize == 0)
         return;
     
     consumersSize--;
     *consumerFlags[consumersSize] = 0;
     
+    pthread_cond_broadcast(&queue->readCondition);
     pthread_join(consumers[consumersSize], NULL);
     free(consumerFlags[consumersSize]);
 
@@ -125,19 +128,19 @@ int main() {
     while ((action = getch()) != 'q') {
         switch (action) {
             case 'o': createConsumer(queue); break;
-            case 'i': killConsumer(); break;
+            case 'i': killConsumer(queue); break;
             case 'l': createProducer(queue); break;
-            case 'k': killProducer(); break;
+            case 'k': killProducer(queue); break;
             case '+': increaseQueue(queue); break;
             case '-': decreaseQueue(queue); break;
         }
     }
 
     while (consumersSize)
-        killConsumer();
+        killConsumer(queue);
     
     while (producersSize)
-        killProducer();
+        killProducer(queue);
 
     return 0;
 }

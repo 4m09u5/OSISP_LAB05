@@ -2,14 +2,18 @@
 #include "queue.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 void consume(struct consumerArgs *args) {
 
     while (*args->flag) {
         Message_p message;
         
-        while (readQueue(args->queue, &message) && *args->flag)
-            usleep(100000);
+        pthread_mutex_lock(&args->queue->mutex);
+        while (readQueueNoMutex(args->queue, &message) && *args->flag)
+            pthread_cond_wait(&args->queue->readCondition, &args->queue->mutex);
+        pthread_cond_signal(&args->queue->writeCondition);
+        pthread_mutex_unlock(&args->queue->mutex);
 
         if (!*args->flag)
             return;

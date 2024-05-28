@@ -2,6 +2,7 @@
 #include "queue.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 void produce(struct producerArgs *args) {
     while (*args->flag) {
@@ -36,8 +37,12 @@ void produce(struct producerArgs *args) {
         message->hash = hash;
         int queueResult = 0;
 
-        while ((queueResult = writeQueue(args->queue, message)) && *args->flag)
-            usleep(100000);
+        pthread_mutex_lock(&args->queue->mutex);
+        while ((queueResult = writeQueueNoMutex(args->queue, message)) && *args->flag)
+            pthread_cond_wait(&args->queue->writeCondition, &args->queue->mutex);
+        pthread_cond_signal(&args->queue->readCondition);
+        pthread_mutex_unlock(&args->queue->mutex);
+        
         
         if (!*args->flag && queueResult) {
             free(message->data);

@@ -13,6 +13,8 @@ typedef struct Message* Message_p;
 
 struct Queue {
     pthread_mutex_t mutex;
+    pthread_cond_t readCondition;
+    pthread_cond_t writeCondition;
     Message_p *head;
     Message_p *tail;
     Message_p *readCur;
@@ -30,3 +32,5 @@ uint64_t getTotalQueueWrites(struct Queue* queue);
 uint64_t getTotalQueueReads(struct Queue* queue);
 uint8_t increaseQueue(struct Queue* queue);
 uint8_t decreaseQueue(struct Queue* queue);
+int readQueueNoMutex(struct Queue* queue, Message_p *message);
+int writeQueueNoMutex(struct Queue* queue, Message_p message);

@@ -16,6 +16,8 @@ struct Queue *createQueue(uint64_t capacity) {
     }
 
     pthread_mutex_init(&queue->mutex, NULL);
+    pthread_cond_init(&queue->readCondition, NULL);
+    pthread_cond_init(&queue->writeCondition, NULL);
     queue->head = buffer;
     queue->tail = buffer + capacity;
     queue->readCur = buffer;
@@ -117,9 +119,32 @@ int readQueueNoMutex(struct Queue* queue, Message_p *message) {
         tmp = queue->head;
 	if(tmp == queue->writeCur)
         queue->full = 0;
+    
 	queue->readCur = tmp;
-
     queue->totalRead++;
+
+	return 0;
+}
+
+int writeQueueNoMutex(struct Queue* queue, Message_p message) {
+    if(queue == NULL) {
+        return 1;
+    }
+	
+    if((queue->writeCur  == queue->readCur) && queue->full) {
+        return 2;	
+    }
+	
+	*(queue->writeCur) = message;
+	
+	Message_p *tmp = queue->writeCur + 1;
+	if(tmp >= queue->tail)
+        tmp = queue->head;
+	if(tmp == queue->readCur)
+        queue->full = 1;
+
+	queue->writeCur = tmp;
+    queue->totalWrite++;
 
 	return 0;
 }
